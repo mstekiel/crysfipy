@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: crysfipy
+Version: 1.0
+Summary: Tools for analysis of physical properties arising from crystal-field Hamiltonian.
+Home-page: https://github.com/mstekiel/crysfipy
+Author: ['Michał Stękiel', 'Petr Čermák']
+Author-email: michal.stekiel@gmail.com
+Requires-Python: ==3.9.*
+Provides-Extra: dev

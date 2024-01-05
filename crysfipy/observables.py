@@ -93,7 +93,7 @@ def neutronint(cefion: CEFion, temperature: float, Q: Tuple[float, float, float]
         # J_perp = np.einsum('ij,jkl',Qperp_projectCEFion, cefion.J)
         # J2_perp = np.einsum('ijk->jk', np.square(np.abs(J_perp)))
         
-        J2 = np.square(np.abs(cefion.J))
+        J2 = np.square(np.abs(cefion.J)) # J is alread ydiagonalized and in the eigenvector basis
         projection = 1-(Q/np.linalg.norm(Q))**2
         
         J2_perp = np.einsum('i,ijk',projection, J2)
@@ -122,12 +122,18 @@ def magnetization(cefion: CEFion, temperature: float, Hfield: Tuple[float,float,
     Calculate the magnetization of the single ion in the crystal field.
     Returned value is in :math:`\mu_B` units.
 
+    Calculation follows from reevaluating the Hamiltonian with the Zeeman term :math:`\vec{\mu} \cdot \vec{H}`
+    and determining the expectation value of magneitzation:
+
     :math:`M_\alpha = g_J \sum_n p_n |<\lambda_n | \hat{J}_\alpha | \lambda_n>|`
 
-    Args:
-        cefion: Rare-earth ion in the crystal field
-        temperature: temperature at which to calculate magnetization   
-        Hfield: Applied magnetic field. Both direction and vlue are important.
+    Parameters:
+        cefion: 
+            Rare-earth ion in the crystal field
+        temperature: 
+            Temperature at which to calculate magnetization   
+        Hfield: 
+            Applied magnetic field. Both direction and value are important.
     '''
     
     # Solve the Hamiltonian of a copy of the given ion
@@ -139,6 +145,43 @@ def magnetization(cefion: CEFion, temperature: float, Hfield: Tuple[float,float,
     M = np.einsum('ij,i', cefion_inH.moment, p)
     
     return tuple(M)
+
+
+def magnetization_exchange(cefion: CEFion, temperature: float, Hfield: Tuple[float,float,float], lam: float, precision: float=1e-5) -> Tuple[float, float, float]:
+    r'''
+    Calculate the magnetization of the single ion in the crystal field, with correction of exchange/molecular fields.
+    Returned value is in :math:`\mu_B` units.
+
+    As for standard magnetization, `observables.magneization()` calculation follows from reevaluating the Hamiltonian with the Zeeman term,
+    but with an effective field :math:`\vec{\mu} \cdot \vec{H}_eff`, where the effective field is corrected for magnetization
+    :math:`\vec{H}_eff = \vec{H}_{external} + \vec{H}_exchange = \vec{H}_{external} + \lambda \vec{M}`.
+    Exchange field is calulated in a self-consistent manner.
+
+    Parameters:
+        cefion: 
+            Rare-earth ion in the crystal field.
+        temperature: 
+            Temperature at which to calculate magnetization.
+        Hfield: 
+            Applied magnetic field. Both direction and value are important.
+        lam:
+            Exchange field parameter.
+        precision:
+            Self-consistent loop will be performed as long as dM/M>precision.
+    '''
+    
+    # Solve the Hamiltonian of a copy of the given ion
+    M = [magnetization(cefion, temperature, Hfield)]
+    residual = 42
+
+    while residual > precision:
+        Hexchange = lam*np.array(M[-1])
+        M_next = magnetization(cefion, temperature, Hfield+Hexchange)
+        M.append(M_next)
+        dM = [m1-m2 for m1,m2 in zip(M[-1], M[-2])]
+        residual = np.linalg.norm(dM)/np.linalg.norm(M[-1])
+    
+    return M[-1]
 
 
 def susceptibility(cefion: CEFion, temperatures: np.ndarray, Hfield_direction: Tuple[float,float,float], method: str='perturbation') -> np.ndarray:
@@ -160,7 +203,7 @@ def susceptibility(cefion: CEFion, temperatures: np.ndarray, Hfield_direction: T
     | :math:`<\lambda_m|J|\lambda_n>` : J matrix elements.
 
 
-
+    
 
     `magnetization`:
     Based on calculating a numerical derivative of the magnetization, with a very small magnetic field
@@ -175,6 +218,8 @@ def susceptibility(cefion: CEFion, temperatures: np.ndarray, Hfield_direction: T
     This raises a RuntimeWarning which is ignored , and the diagonal is replaced with the :math:`1/k_B T` values, and the two summations are bundled together. 
     This feels dirty, but works so far, even for spin-half systems, which have degenerated energy levels.
     Maybe because the transitions between degenerated levels are not exactly 0 in the calculations (1e-15 rather).
+
+    
 
     
     Parameters:
@@ -233,42 +278,46 @@ def susceptibility(cefion: CEFion, temperatures: np.ndarray, Hfield_direction: T
         
     return susceptibility
         
-        
-def thermodynamics(cefion: CEFion, T: np.ndarray):
+
+def thermodynamics(cefion: CEFion, T: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     r"""
     Calculate the fundamental thermodynamic values as a function of temperature.
     
-    These functions are calculated alltogether taking advantage of the fact that thermodynamics can be determined from the partition function :math:`Z`, upon differentiation on :math:`\beta`, where :math:`\beta = \frac{1}{k_B T}`.
+    These functions are calculated altogether taking advantage of the fact 
+    that thermodynamics can be determined from the partition function :math:`Z` 
+    taken as the weighing function and calculating moments of average energy <E^n>.
     
     | Partition function: :math:`Z = \sum_n e^{-\beta E_n}`
-    | Average energy: :math:`\langle E \rangle = - \frac{\partial Z}{\partial \beta}`
-    | Entropy: :math:`S = k_B ( \ln Z - \beta \frac{\partial Z}{\partial \beta} )`
-    | Heat capacity: :math:`C_V = k_B \beta^2 \frac{\partial^2 Z}{\partial \beta^2}`
+    | Average (internal) energy: :math:`\langle E \rangle = U = \frac{1}{Z} \sum_n E_n e^{-\beta E_n}`
+    | Free energy: :math:`F = -T ln(Z)`
+    | Entropy: :math:`S = (U-F)/T`
+    | Specific heat: :math:`C_V = (<E^2> - <E>)/T^2`
     
     Parameters:
-        cefion : :obj:`crysfipy.CEFion`
+        cefion:
             Rare-earth ion in crystal field
         T : ndarray
-            Temperature
+            Temperature in Kelvin
 
             
     Returns:
-        Z, E, S CV : The partition function, average energy (internal energy), entropy and heat capacity, respectively.
+        Z, E, F, S Cv : The partition function, average energy (internal energy), free energy, entropy and heat capacity, respectively.
     """
     Z = np.zeros(len(T))
-    beta = C.meV2K/T
+    E = np.zeros(len(T))
+    E2 = np.zeros(len(T))
     
     for En in cefion.energies:
-        Z += np.exp(-En*beta)
-        
+        Z += np.exp(-En*C.meV2K/T)
+        E += En*np.exp(-En*C.meV2K/T)
+        E2 += En*En*np.exp(-En*C.meV2K/T)
 
-    dlogZ = np.gradient(np.log(Z), beta)
-    d2logZ = - np.gradient(dlogZ, beta)
-    
-    E = -dlogZ
-    S = np.log(Z)-beta*dlogZ
-    Cv = beta**2 * d2logZ
-    
-    return Z, E, S, Cv
+    E /= Z
+    E2 /= Z
+    F = -T*np.log(Z)
+    S = (E-F)/T
+    Cv = (E2-E**2)/T**2
+            
+    return Z, E, F, S, Cv
 
     
