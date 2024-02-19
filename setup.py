@@ -13,7 +13,7 @@ setup(name='crysfipy',
         'scipy'
     ],
     extras_require={
-        "dev": ['sphinx'],
+        "doc": ['sphinx', 'furo'],
     },
     include_package_data=True,
     zip_safe=False)

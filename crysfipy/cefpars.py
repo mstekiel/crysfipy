@@ -27,15 +27,13 @@ class CEFpars:
     Examples:
         Create set of CF parameters by named parameters:
 
-        >>> print(CEFpars('C4h', [-0.696, 4.06e-3, 0.0418, 0, 4.64e-6, 8.12e-4, 1.137e-4], 'K'))
-        Set of CEF parameters for C4h point group in a tetragonal lattice
-        B20 = -0.05998 meV
-        B40 = 0.0003499 meV
-        B44 = 0.003602 meV
-        B4m4 = 0.0 meV
-        B60 = 3.998e-07 meV
-        B64 = 6.997e-05 meV
-        B6m4 = 9.798e-06 meV
+        >>> print( CEFpars('D4', [1.203, -0.001, 0.244], 'meV') )
+            Set of CEF parameters for D4 point group in a tetragonal lattice
+            B20 = 1.203 meV
+            B40 = -0.001 meV
+            B44 = 0.244 meV
+            B60 = 0.0 meV
+            B64 = 0.0 meV
     """
     
     def allowed_Bpars(self, pointGroupName: str) -> list[str]:

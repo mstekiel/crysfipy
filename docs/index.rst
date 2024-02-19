@@ -8,7 +8,7 @@ CrysFiPy documentation
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Content:
    
    Crystal field parameters handling <source/cefpars>
    Rare-earth ion <source/ion>

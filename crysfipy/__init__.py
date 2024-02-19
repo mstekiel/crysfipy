@@ -1,3 +1,7 @@
+'''
+Library for crystal field calculations.
+'''
+
 __version__ = '1.1'
 
 # Import main classes
