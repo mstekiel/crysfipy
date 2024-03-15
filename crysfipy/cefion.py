@@ -53,7 +53,7 @@ class CEFion:
             List of kets corresponding to the J basis of the free ion problem.
     '''
 
-    def __init__(self, ion: Ion, Hfield: Tuple[float, float, float], cfp: CEFpars, diagonalize: bool=True):
+    def __init__(self, ion: Ion, cfp: CEFpars,  Hfield: Tuple[float, float, float]=[0,0,0], diagonalize: bool=True):
         self.ion = ion
         self.Jval = self.ion.J
         Jval = self.Jval
@@ -145,7 +145,8 @@ class CEFion:
         
         Returns
         -------
-            None
+            E, U
+                Products of diagonalization, H = U E U^T.
             
         Raises
         ------
@@ -157,29 +158,25 @@ class CEFion:
         # Diagonalize the Hamiltonian
         # Other functions than scipy.linalg.schur do not produce perpendicular subspaces for degenerated eigenvalues
         E, U = schur(self.hamiltonian)
-        E = np.diag(E)
+        eigenvalues = np.diag(E)
 
         # Check if energies are largely imaginary
-        if np.any( np.abs(np.imag(np.around(E, Eimag_precision))) > 0):
-            raise ValueError(f'Final energies are complex! {E} Check `Eimag_precision` option.')
+        if np.any( np.abs(np.imag(np.around(eigenvalues, Eimag_precision))) > 0):
+            raise ValueError(f'Final energies are complex! {eigenvalues} Check `Eimag_precision` option.')
         
-        self.energies = np.real(E) - int(shiftToZero)*min(np.real(E))     # shift to zero level
+        self.energies = np.real(eigenvalues) - int(shiftToZero)*min(np.real(eigenvalues))     # shift to zero level
 
         # TODO check if U is orthogonal based on comparison with QR decomposition
         self.eigenvectors = U
         
-
         # Sorting
         if sortWithE:
             sortedIndices = self.energies.argsort()
         else:
             sortedIndices = np.arange(self.Jval)
-            
 
         self.eigenvectors = self.eigenvectors[:,sortedIndices]
         self.energies =  self.energies[sortedIndices]
-        
-        
         
         # Change the basis of principal operators to the eigenstate basis with specified sorting scheme
         self.Jx = dot(dot(self.eigenvectors.conj().transpose(), self.Jx), self.eigenvectors)
@@ -188,12 +185,11 @@ class CEFion:
        
         self.J = np.array([self.Jx, self.Jy, self.Jz])
 
-        # Calculate all metrix elemnt
+        # Calculate magnetic moment
         mu = self.ion.gJ * np.einsum('ijj->ji', self.J)
         self.moment = np.real(mu + mu.conj())/2
-       
 
-        #calculate degeneracy
+        # Degeneracy
         deg_e = []
         levels = 0
         deg_e.append([self.energies[0], 0])
@@ -204,7 +200,9 @@ class CEFion:
             else:
                 deg_e[levels][1] += 1
 
-        self.degeneracies = np.array(deg_e)   
+        self.degeneracies = np.array(deg_e)
+
+        return E, U
         
     def __str__(self, precision: float=4):
         """

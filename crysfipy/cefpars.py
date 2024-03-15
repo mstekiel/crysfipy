@@ -1,4 +1,3 @@
-import numbers
 import numpy as np
 from . import constants as C
 
@@ -73,6 +72,10 @@ class CEFpars:
         
         return allowed_Bpars[pointGroupName]
     
+    def fromDict(self, Bdict: dict[str, float], unit: str):
+        # Check if all dictionary keys correspond to implemented Stevens operators
+        return
+    
     def __init__(self, pointGroupName: str, Bvalues: list[float], units: str):
         self.B_names = self.allowed_Bpars(pointGroupName)
     
@@ -123,7 +126,7 @@ class CEFpars:
             
         return ret
             
-    def _assignLattice(self, pointGroupName) -> str:
+    def _assignLattice(self, pointGroupName: str) -> str:
         PG2lattice = {
             'C2':'monoclinic', 'Cs':'monoclinic', 'C2h':'monoclinic',\
             'C2v':'orthorhombic','D2':'orthorhombic', 'D2h':'orthorhombic',\
@@ -134,7 +137,8 @@ class CEFpars:
             'C6':'hexagonal', 'C3h':'hexagonal','C6h':'hexagonal',\
             'D6':'hexagonal', 'C6v':'hexagonal','D3h':'hexagonal', 'D6h':'hexagonal',\
             'T':'cubic', 'Th':'cubic',\
-            'Td':'cubic', 'O':'cubic','Oh':'cubic'\
+            'Td':'cubic', 'O':'cubic','Oh':'cubic',\
+            '?':'undefined'
         }
         
         return PG2lattice[pointGroupName]

@@ -3,6 +3,7 @@ from .cefmatrices import *
 from .cefion import CEFion
 
 import numpy as np
+import scipy
 
 from typing import Tuple
     
@@ -137,7 +138,7 @@ def magnetization(cefion: CEFion, temperature: float, Hfield: Tuple[float,float,
     '''
     
     # Solve the Hamiltonian of a copy of the given ion
-    cefion_inH = CEFion(cefion.ion, Hfield, cefion.cfp, diagonalize=True)
+    cefion_inH = CEFion(ion=cefion.ion, cfp=cefion.cfp, Hfield=Hfield, diagonalize=True)
 
     # The diagonalized Hamiltonians' operators are already transformed into the sorted eigenvector base
     p = boltzman_population(cefion_inH.energies, temperature)
@@ -167,7 +168,7 @@ def magnetization_exchange(cefion: CEFion, temperature: float, Hfield: Tuple[flo
         lam:
             Exchange field parameter.
         precision:
-            Self-consistent loop will be performed as long as dM/M>precision.
+            Self-consistent loop will be performed as long as |dM/M|>precision.
     '''
     
     # Solve the Hamiltonian of a copy of the given ion
@@ -212,14 +213,7 @@ def susceptibility(cefion: CEFion, temperatures: np.ndarray, Hfield_direction: T
 
     Magnetization is calculated internally by :func:`magnetization`. :math:`\epsilon = 10^{-8}`
 
-    ALL BELOW MADE A CRASH FOR ANOTER SYSTEM
-    In calculations a dangerous trick is used. The :math:`\frac{1-exp(-\Delta_{m,n}/k_B T)}{\Delta_{m,n}}` 
-    factor is computed as a matrix, so naturally it will be divergent on the diagonal, since :math:`\Delta_{m,n}=0` there. 
-    This raises a RuntimeWarning which is ignored , and the diagonal is replaced with the :math:`1/k_B T` values, and the two summations are bundled together. 
-    This feels dirty, but works so far, even for spin-half systems, which have degenerated energy levels.
-    Maybe because the transitions between degenerated levels are not exactly 0 in the calculations (1e-15 rather).
-
-    
+  
 
     
     Parameters:
@@ -240,7 +234,7 @@ def susceptibility(cefion: CEFion, temperatures: np.ndarray, Hfield_direction: T
 
     if method=='magnetization':
         susceptibility = np.zeros(len(temperatures))
-        eps = 1e-8  
+        eps = 1e-5 
         
         for it, temperature in enumerate(temperatures):
             Hfield = eps * np.array(Hfield_direction)/np.linalg.norm(Hfield_direction)
@@ -250,15 +244,20 @@ def susceptibility(cefion: CEFion, temperatures: np.ndarray, Hfield_direction: T
         susceptibility = np.empty(len(temperatures))
         #susceptibility.fill(np.nan)
 
+        # Tricky way to create a 2D array of energies associated with transitions between levels
+        jumps = cefion.energies - cefion.energies[np.newaxis].T
+
+        # Clean up
+        jumps_with_zero_energy = np.where(np.abs(jumps)< C.numerical_zero)
+        jumps_with_positive_energy = np.where(jumps>0)
+        # jumps_with_negative_energy = np.where(jumps<0) # obsolete but left for clarifty, these will be set to zero
+
+        # Calculate the J^2 matrix
+        J2 = np.square(np.abs(cefion.J))
+        J2_directed = np.einsum('i,ijk',Hfield_direction, J2)/np.linalg.norm(Hfield_direction)  # TODO WTF is this projection?
+
+        print(jumps)
         for it, temperature in enumerate(temperatures):
-            # Tricky way to create a 2D array of energies associated with transitions between levels
-            jumps = cefion.energies - cefion.energies[np.newaxis].T
-
-            # Clean up
-            jumps_with_zero_energy = np.where(np.abs(jumps)< C.numerical_zero)
-            jumps_with_positive_energy = np.where(jumps>0)
-            # jumps_with_negative_energy = np.where(jumps<0) # obsolete but left for clarifty, these will be set to zero
-
             # Define the transition matrix taking into account the diagonal and negative energy jumps
             Tmx = np.zeros(np.shape(jumps))
             Tmx[jumps_with_zero_energy] = 1*C.meV2K/temperature
@@ -268,9 +267,6 @@ def susceptibility(cefion: CEFion, temperatures: np.ndarray, Hfield_direction: T
             transition_probs = boltzman_population(cefion.energies, temperature)
             Tmx = Tmx * transition_probs[:, np.newaxis]
 
-            # Calculate the J^2 matrix
-            J2 = np.square(np.abs(cefion.J))
-            J2_directed = np.einsum('i,ijk',Hfield_direction, J2)/np.linalg.norm(Hfield_direction)
             
             susceptibility[it] = (cefion.ion.gJ)**2 * np.sum(Tmx * J2_directed)
     else:
@@ -308,6 +304,7 @@ def thermodynamics(cefion: CEFion, T: np.ndarray) -> Tuple[np.ndarray, np.ndarra
     E2 = np.zeros(len(T))
     
     for En in cefion.energies:
+        print( np.exp(-En*C.meV2K/T) )
         Z += np.exp(-En*C.meV2K/T)
         E += En*np.exp(-En*C.meV2K/T)
         E2 += En*En*np.exp(-En*C.meV2K/T)
@@ -319,5 +316,3 @@ def thermodynamics(cefion: CEFion, T: np.ndarray) -> Tuple[np.ndarray, np.ndarra
     Cv = (E2-E**2)/T**2
             
     return Z, E, F, S, Cv
-
-    
