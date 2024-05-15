@@ -2,7 +2,21 @@
 Library for crystal field calculations.
 '''
 
-__version__ = '1.1'
+__version__ = '1.2'
+
+'''
+History
+
+- 1.2
+Implement additional Stevens operators and reimplement the way to initialize
+crystal-field parameters.
+
+- 1.1
+  ???
+  
+- 1.0
+  ???
+'''
 
 # Import main classes
 from .ion import Ion

@@ -93,7 +93,7 @@ def neutronint(cefion: CEFion, temperature: float, Q: Tuple[float, float, float]
         # J_perp = np.einsum('ij,jkl',Qperp_projectCEFion, cefion.J)
         # J2_perp = np.einsum('ijk->jk', np.square(np.abs(J_perp)))
         
-        J2 = np.square(np.abs(cefion.J)) # J is alread ydiagonalized and in the eigenvector basis
+        J2 = np.square(np.abs(cefion.J)) # J is already diagonalized and in the eigenvector basis
         projection = 1-(Q/np.linalg.norm(Q))**2
         
         J2_perp = np.einsum('i,ijk',projection, J2)
