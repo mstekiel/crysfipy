@@ -152,7 +152,7 @@ def magnetization_exchange(cefion: CEFion, temperature: float, Hfield: Tuple[flo
     Calculate the magnetization of the single ion in the crystal field, with correction of exchange/molecular fields.
     Returned value is in :math:`\mu_B` units.
 
-    As for standard magnetization, `observables.magneization()` calculation follows from reevaluating the Hamiltonian with the Zeeman term,
+    As for standard magnetization, `observables.magnetization()` calculation follows from reevaluating the Hamiltonian with the Zeeman term,
     but with an effective field :math:`\vec{\mu} \cdot \vec{H}_eff`, where the effective field is corrected for magnetization
     :math:`\vec{H}_eff = \vec{H}_{external} + \vec{H}_exchange = \vec{H}_{external} + \lambda \vec{M}`.
     Exchange field is calulated in a self-consistent manner.
@@ -167,7 +167,7 @@ def magnetization_exchange(cefion: CEFion, temperature: float, Hfield: Tuple[flo
         lam:
             Exchange field parameter.
         precision:
-            Self-consistent loop will be performed as long as |dM/M|>precision.
+            Self-consistent loop will be performed as long as abs(dM/M)>precision.
     '''
     
     # Solve the Hamiltonian of a copy of the given ion
