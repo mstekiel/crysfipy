@@ -1,13 +1,15 @@
 from typing import Tuple
 
+from .ion import  Ion
+from .cefpars import CEFpars
 from . import constants as C
-from . import CEFpars, Ion
-from .cefmatrices import *
+from .cefmatrices import StevensBase, J_x, J_y, J_z
 
 import numpy as np
 from scipy.linalg import schur
 # from numpy import conj, transpose, dot, diag
 # import numbers
+
 
 
 class CEFion:
@@ -84,12 +86,10 @@ class CEFion:
         # THE HAMILTONIAN
         H = -C.uB * self.ion.gJ * np.einsum('ijk,i', self.J, self.Hfield)
         
-        # Store Stevens operators in the dictionary containing pointers tu functions
-        StevensOperator = { "B20":O_20, "B22":O_22,"B2m2":O_2m2,\
-                            "B40":O_40, "B42":O_42,"B4m2":O_4m2, "B43":O_43,"B4m3":O_4m3, "B44":O_44,"B4m4":O_4m4, \
-                            "B60":O_60, "B62":O_62,"B6m2":O_6m2, "B63":O_63,"B6m3":O_6m3, "B64":O_64,"B6m4":O_6m4, "B66":O_64,"B6m6":O_6m6}
-        for Bij_name, Bij_value in zip(self.cfp.B_names, self.cfp.B_values):
-            H += Bij_value * StevensOperator[Bij_name](Jval)
+        # Store Stevens operators in the dictionary containing pointers to functions
+        O = StevensBase(self.Jval)
+        for Bname, Bvalue in self.cfp.Bpars.items():
+            H += Bvalue * O[Bname[1:]]
             
 
             
@@ -179,9 +179,9 @@ class CEFion:
         self.energies =  self.energies[sortedIndices]
         
         # Change the basis of principal operators to the eigenstate basis with specified sorting scheme
-        self.Jx = dot(dot(self.eigenvectors.conj().transpose(), self.Jx), self.eigenvectors)
-        self.Jy = dot(dot(self.eigenvectors.conj().transpose(), self.Jy), self.eigenvectors)
-        self.Jz = dot(dot(self.eigenvectors.conj().transpose(), self.Jz), self.eigenvectors)
+        self.Jx = np.dot(np.dot(self.eigenvectors.conj().transpose(), self.Jx), self.eigenvectors)
+        self.Jy = np.dot(np.dot(self.eigenvectors.conj().transpose(), self.Jy), self.eigenvectors)
+        self.Jz = np.dot(np.dot(self.eigenvectors.conj().transpose(), self.Jz), self.eigenvectors)
        
         self.J = np.array([self.Jx, self.Jy, self.Jz])
 
