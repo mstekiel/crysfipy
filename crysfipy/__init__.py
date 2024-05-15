@@ -8,14 +8,14 @@ __version__ = '1.2'
 History
 
 - 1.2
-Implement additional Stevens operators and reimplement the way to initialize
-crystal-field parameters.
+  Implement additional Stevens operators and reimplement the way to initialize
+  crystal-field parameters.
 
 - 1.1
-  ???
+  Implement magnetization.
   
 - 1.0
-  ???
+  Hello World!
 '''
 
 # Import main classes
@@ -24,7 +24,7 @@ from .cefpars import CEFpars
 from .cefion import CEFion
 
 # Import the functions
-from .cefmatrices import *
+# from .cefmatrices import *
 from .observables import *
 
 # Original copyright:
