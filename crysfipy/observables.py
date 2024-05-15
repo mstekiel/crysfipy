@@ -1,9 +1,8 @@
 from . import constants as C
-from .cefmatrices import *
+# from .cefmatrices import *
 from .cefion import CEFion
 
 import numpy as np
-import scipy
 
 from typing import Tuple
     
@@ -297,7 +296,7 @@ def thermodynamics(cefion: CEFion, T: np.ndarray) -> Tuple[np.ndarray, np.ndarra
 
             
     Returns:
-        Z, E, F, S Cv : The partition function, average energy (internal energy), free energy, entropy and heat capacity, respectively.
+        Z, E, F, S Cv : The partition function, average energy (internal energy), free energy, entropy, and heat capacity, respectively.
     """
     Z = np.zeros(len(T))
     E = np.zeros(len(T))
